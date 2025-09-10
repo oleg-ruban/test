@@ -1,6 +1,9 @@
+// Виклик головного модуля функцій введення-виводу
 #include <stdio.h>
+// Виклик головного модуля математичних функцій
 #include <math.h>
 
+// Опис головної функції
 int main() {
     int task;
     printf("Оберіть завдання (1 або 2): ");
@@ -38,8 +41,7 @@ int main() {
         printf("Результат:\n");
         printf("x = %.6f\n", x);
         printf("y = %.6f\n", y);
-    }
-    else if (task == 2) {
+    } else if (task == 2) {
         double a = 0.3, c = 10.0;
         char choice;
 
@@ -71,8 +73,7 @@ int main() {
             }
             printf("x = %2d  ->  y = %.6f\n", x, y);
         }
-    }
-    else {
+    } else {
         printf("Невірний номер завдання.\n");
     }
 
