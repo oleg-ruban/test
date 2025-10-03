@@ -10,3 +10,5 @@ target_link_libraries(lab1 m)
 # Вторая программа
 add_executable(lab2 lab2.c)
 #target_link_libraries(lab2 m)
+
+add_executable(lab3 lab3.c)
