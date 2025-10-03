@@ -1,6 +1,6 @@
 .SILENT:
 build:
-	gcc lab2.c -o lab2 -lm
+	gcc lab3.c -o lab3 -lm
 
 run:
 	./lab2
