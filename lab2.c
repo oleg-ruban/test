@@ -1,35 +1,34 @@
 #include <stdio.h>
 #include <math.h>
 
-double exp_series(double x, double eps, int *iterations) {
-    double term = 1.0;   // первый член ряда: x^0 / 0! = 1
-    double sum = 0.0;
-    int n = 0;
-
-    while (fabs(term) >= eps) {
-        sum += term;        // добавляем член ряда
-        n++;
-        term *= x / n;      // рекуррентная формула: a_n = a_{n-1} * (x / n)
-    }
-
-    *iterations = n;        // записываем количество шагов
-    return sum;
-}
-
 int main() {
-    double x, eps, result;
-    int iterations;
+    double x, eps;         // x — аргумент, eps — задана точність
+    double term = 1.0;     // поточний член ряду (перший член = 1)
+    double sum = 0.0;      // накопичена сума елементів ряду
+    int n = 0;             // лічильник ітерацій
 
-    printf("Введите x: ");
+    // Введення даних користувачем
+    printf("Введіть значення x: ");
     scanf("%lf", &x);
 
-    printf("Введите точность eps: ");
+    printf("Введіть точність eps: ");
     scanf("%lf", &eps);
 
-    result = exp_series(x, eps, &iterations);
+    // Обчислення ряду e^x = 1 + x/1! + x^2/2! + ... з рекурентною формулою
+    while (fabs(term) >= eps) { // поки член ряду більший або рівний точності
+        sum += term;             // додаємо поточний член до суми
+        n++;                     // збільшуємо лічильник ітерацій
+        term *= x / n;           // рекурентна формула: a_{n+1} = a_n * x / n
+    }
 
-    printf("Значение e^%.2f ≈ %.10f\n", x, result);
-    printf("Количество итераций: %d\n", iterations);
+    // Вивід результатів
+    printf("\nРезультати обчислення:\n");
+    printf("e^x ≈ %.10lf\n", sum);     // наближене значення e^x
+    printf("Кількість ітерацій: %d\n", n);
+    printf("Точність: %.10lf\n", eps);
+
+    // Порівняння з бібліотечною функцією exp(x)
+    printf("Перевірка (exp(x)): %.10lf\n", exp(x));
 
     return 0;
 }
