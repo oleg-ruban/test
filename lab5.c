@@ -130,9 +130,11 @@ void fill_random(Student *s, int n) {
 
     char surnames[][20] = {"Ruban", "Petrenko", "Shevchenko", "Bondar"};
     char names[][20]     = {"Maria", "Oleg", "Mykola", "Serhii"};
-    char groups[][10]    = {"KA-5","KA-52","KA-53","KA-54"};
+    char groups[][10]    = {"KA-51","KA-52","KA-53","KA-54"};
 
     int ns = 4, nn = 4, ng = 4;
+
+    printf("\nАвтоматично згенерований список студентів:\n");
 
     for (int i = 0; i < n; ) {
 
@@ -140,13 +142,16 @@ void fill_random(Student *s, int n) {
         strcpy(tmp.surname, surnames[rand() % ns]);
         strcpy(tmp.name, names[rand() % nn]);
         strcpy(tmp.group, groups[rand() % ng]);
-        tmp.avg = 60 + rand() % 41;
+        // tmp.avg = 60 + rand() % 41;
+        tmp.avg = 5.0 + (rand() % 51) / 10.0; // 5.0 - 10.0
 
         if (unique(s, i, tmp)) {
             s[i] = tmp;
+            printf("%d) %-15s %-10s %-8s %.2f\n", i + 1, s[i].surname, s[i].name, s[i].group, s[i].avg);
             i++;
         }
     }
+    printf("\n");
 }
 
 
