@@ -58,7 +58,12 @@ int main() {
     countNegativesIterative(A, N, M, resIter);
 
     // --- Рекурсивний підрахунок ---
-    countNegativesRecursiveWrapper(A, N, M, resRec);
+    // Обнулення результатів
+    for (int i = 0; i < N; i++)
+        resRec[i] = 0;
+
+    // Старт рекурсії з [0][0]
+    countNegativesRecursive(A, N, M, resRec, 0, 0);
 
     // --- Виведення результатів ---
     printf("\nКількість від’ємних елементів у кожному рядку (ітеративно):\n");
@@ -150,22 +155,16 @@ int countNegativesIterative(int **A, int N, int M, int *res) {
     return 0;
 }
 
-// Обгортка для рекурсивного підрахунку
-int countNegativesRecursiveWrapper(int **A, int N, int M, int *res) {
-    for (int i = 0; i < N; i++)
-        res[i] = 0;
-    return countNegativesRecursive(A, N, M, res, 0, 0);
-}
+int countNegativesRecursive(int **A, int N, int M, int *res, int i, int j)
+{
+    if (i >= N)               // База рекурсії — матриця закінчилася
+        return 0;
 
-// Рекурсивна допоміжна функція
-int countNegativesRecursive(int **A, int N, int M, int *res, int i, int j) {
-    if (i >= N) return 0;           // Умова завершення
-    if (A[i][j] < 0) res[i]++;      // Лічильник від’ємних
+    if (A[i][j] < 0)          // Лічимо від’ємні елементи
+        res[i]++;
 
-    if (j + 1 < M)                  // Перехід до наступного елемента рядка
-        countNegativesRecursive(A, N, M, res, i, j + 1);
-    else                            // Перехід до наступного рядка
-        countNegativesRecursive(A, N, M, res, i + 1, 0);
+    if (j + 1 < M)            // Переходимо до наступного стовпця
+        return countNegativesRecursive(A, N, M, res, i, j + 1);
 
-    return 0; // Повертаємо статус
+    return countNegativesRecursive(A, N, M, res, i + 1, 0);
 }
