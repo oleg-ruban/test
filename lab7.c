@@ -3,24 +3,140 @@
 #include <string.h>
 
 #define BASE 28886
-#define MAX_DIGITS 1000
+#define MAX_DIGITS 2000
 
 typedef struct {
     int d[MAX_DIGITS];
     int len;
+    int sign;      // 1 або -1
 } Long;
 
-// -----------------------------------------------
-// Перетворення десяткового числа (у вигляді рядка) у Long
-// -----------------------------------------------
-Long fromDecimal(char *s) {
-    Long R = {{0}, 1};
+// Ініціалізація Long
+void initLong(Long *A) {
+    A->len = 1;
+    A->sign = 1;
+    for (int i = 0; i < MAX_DIGITS; i++)
+        A->d[i] = 0;
+}
 
-    // Тимчасова змінна – копія числа у десятковій формі
+// Порівняння |A| та |B|
+int cmpAbs(Long *A, Long *B) {
+    if (A->len > B->len) return 1;
+    if (A->len < B->len) return -1;
+    for (int i = A->len - 1; i >= 0; i--) {
+        if (A->d[i] > B->d[i]) return 1;
+        if (A->d[i] < B->d[i]) return -1;
+    }
+    return 0;
+}
+
+// Додавання без урахування знака
+Long addAbs(Long A, Long B) {
+    Long R;
+    initLong(&R);
+
+    int carry = 0;
+    int n = (A.len > B.len ? A.len : B.len);
+    R.len = 0;
+
+    for (int i = 0; i < n; i++) {
+        int x = (i < A.len ? A.d[i] : 0);
+        int y = (i < B.len ? B.d[i] : 0);
+        int s = x + y + carry;
+        R.d[R.len++] = s % BASE;
+        carry = s / BASE;
+    }
+    if (carry)
+        R.d[R.len++] = carry;
+
+    return R;
+}
+
+// Віднімання |A| - |B|, A >= B
+Long subAbs(Long A, Long B) {
+    Long R;
+    initLong(&R);
+    int borrow = 0;
+
+    R.len = A.len;
+    for (int i = 0; i < A.len; i++) {
+        int x = A.d[i] - borrow;
+        int y = (i < B.len ? B.d[i] : 0);
+        if (x < y) {
+            x += BASE;
+            borrow = 1;
+        } else borrow = 0;
+        R.d[i] = x - y;
+    }
+
+    while (R.len > 1 && R.d[R.len - 1] == 0)
+        R.len--;
+
+    return R;
+}
+
+// Додавання з урахуванням знака
+Long add(Long A, Long B) {
+    if (A.sign == B.sign) {
+        Long R = addAbs(A, B);
+        R.sign = A.sign;
+        return R;
+    }
+
+    int cmp = cmpAbs(&A, &B);
+    if (cmp == 0) {
+        Long R;
+        initLong(&R);
+        return R;
+    }
+    if (cmp > 0) {
+        Long R = subAbs(A, B);
+        R.sign = A.sign;
+        return R;
+    } else {
+        Long R = subAbs(B, A);
+        R.sign = B.sign;
+        return R;
+    }
+}
+
+// Віднімання з урахуванням знака
+Long sub(Long A, Long B) {
+    B.sign *= -1;
+    return add(A, B);
+}
+
+// Множення
+Long mul(Long A, Long B) {
+    Long R;
+    initLong(&R);
+    R.len = A.len + B.len;
+
+    for (int i = 0; i < A.len; i++) {
+        long long carry = 0;
+        for (int j = 0; j < B.len; j++) {
+            long long cur = R.d[i + j] + (long long)A.d[i] * B.d[j] + carry;
+            R.d[i + j] = cur % BASE;
+            carry = cur / BASE;
+        }
+        R.d[i + B.len] += carry;
+    }
+
+    while (R.len > 1 && R.d[R.len - 1] == 0)
+        R.len--;
+
+    R.sign = A.sign * B.sign;
+    return R;
+}
+
+// Конвертація десяткового рядка → Long
+Long fromDecimal(const char *s) {
+    Long R;
+    initLong(&R);
+
     char buf[5000];
     strcpy(buf, s);
 
-    // Ділимо на BASE поки число не стане 0
     while (!(strlen(buf) == 1 && buf[0] == '0')) {
         long long carry = 0;
         char newbuf[5000];
@@ -31,7 +147,6 @@ Long fromDecimal(char *s) {
             int x = carry * 10 + (buf[i] - '0');
             int q = x / BASE;
             int r = x % BASE;
-
             if (q != 0 || started) {
                 newbuf[pos++] = q + '0';
                 started = 1;
@@ -43,9 +158,8 @@ Long fromDecimal(char *s) {
         R.d[R.len] = 0;
         R.len++;
 
-        if (pos == 0) {
-            strcpy(buf, "0");
-        } else {
+        if (pos == 0) strcpy(buf, "0");
+        else {
             newbuf[pos] = '\0';
             strcpy(buf, newbuf);
         }
@@ -54,14 +168,12 @@ Long fromDecimal(char *s) {
     return R;
 }
 
-// -----------------------------------------------
-// Перетворення Long у десяткове число (рядок)
-// -----------------------------------------------
+// Перетворення Long → десятковий рядок
 char *toDecimal(Long A) {
-    static char out[10000];
+    static char out[21000];
     memset(out, 0, sizeof(out));
 
-    char buf[10000] = "0";
+    char buf[21000] = "0";
 
     for (int i = A.len - 1; i >= 0; i--) {
         long long carry = A.d[i];
@@ -84,170 +196,84 @@ char *toDecimal(Long A) {
     for (int i = 0; i < n; i++)
         out[i] = buf[n - 1 - i];
 
+    // Вставка знака без додаткового буфера
+    if (A.sign < 0) {
+        memmove(out + 1, out, n + 1); // +1 для '\0'
+        out[0] = '-';
+    }
+
     return out;
 }
 
-// -----------------------------------------------
-// Арифметичні операції у BASE 28886
-// -----------------------------------------------
-
-Long add(Long A, Long B) {
-    Long R = {{0}, 0};
-    int carry = 0;
-    int n = (A.len > B.len ? A.len : B.len);
-
-    for (int i = 0; i < n; i++) {
-        int x = (i < A.len ? A.d[i] : 0);
-        int y = (i < B.len ? B.d[i] : 0);
-        int s = x + y + carry;
-
-        R.d[R.len++] = s % BASE;
-        carry = s / BASE;
-    }
-
-    if (carry) R.d[R.len++] = carry;
-    return R;
-}
-
-Long sub(Long A, Long B) {
-    Long R = {{0}, 0};
-    int borrow = 0;
-
-    for (int i = 0; i < A.len; i++) {
-        int x = A.d[i] - borrow;
-        int y = (i < B.len ? B.d[i] : 0);
-
-        if (x < y) {
-            x += BASE;
-            borrow = 1;
-        } else borrow = 0;
-
-        R.d[R.len++] = x - y;
-    }
-
-    while (R.len > 1 && R.d[R.len - 1] == 0)
-        R.len--;
-
-    return R;
-}
-
-Long mul(Long A, Long B) {
-    Long R = {{0}, A.len + B.len};
-
-    for (int i = 0; i < A.len; i++) {
-        long long carry = 0;
-        for (int j = 0; j < B.len; j++) {
-            long long cur = R.d[i + j] +
-                            (long long)A.d[i] * B.d[j] +
-                            carry;
-            R.d[i + j] = cur % BASE;
-            carry = cur / BASE;
-        }
-        R.d[i + B.len] += carry;
-    }
-
-    while (R.len > 1 && R.d[R.len - 1] == 0)
-        R.len--;
-
-    return R;
-}
-
-// -----------------------------------------------
-// Розбір вводу виду: "123 456 789 - 95 000"
-// -----------------------------------------------
-void splitInput(char *line, char *A, char *op, char *B) {
-    int i = 0, j = 0;
-
-    while (line[i] != '+' && line[i] != '-' &&
+// Розбір виразу "123 456 - 55 000"
+void splitInputLine(const char *line, char *A, char *op, char *B) {
+    int i = 0;
+    while (line[i] == ' ') i++;
+    int j = 0;
+    while (line[i] && line[i] != '+' && line[i] != '-' &&
            line[i] != '*' && line[i] != '/') {
         A[j++] = line[i++];
     }
     A[j] = 0;
-
     *op = line[i++];
-
+    while (line[i] == ' ') i++;
     j = 0;
-    while (line[i] != 0 && line[i] != '\n')
+    while (line[i] && line[i] != '\n') {
         B[j++] = line[i++];
-    B[j] = 0;
-
-    // Очистити зайві пробіли
-    while (A[0] == ' ') memmove(A, A+1, strlen(A));
-    while (B[0] == ' ') memmove(B, B+1, strlen(B));
-}
-
-// -----------------------------------------------
-// Ділення Long на Long (спрощене, через ділення на int)
-// -----------------------------------------------
-Long divInt(Long A, int b) {
-    Long R = {{0}, A.len};
-    long long rem = 0;
-
-    for (int i = A.len - 1; i >= 0; i--) {
-        long long cur = A.d[i] + rem * BASE;
-        R.d[i] = cur / b;
-        rem = cur % b;
     }
-
-    while (R.len > 1 && R.d[R.len - 1] == 0)
-        R.len--;
-
-    return R;
+    B[j] = 0;
 }
 
-// -----------------------------------------------
-// MAIN
-// -----------------------------------------------
+
 int main() {
     char line[5000];
-    printf("Введіть вираз:\n");
+    printf("Введіть вираз (наприклад, 954 654 565 - 879 654 004):\n");
 
     fgets(line, sizeof(line), stdin);
 
-    char Adec[3000], Bdec[3000], op;
-    splitInput(line, Adec, &op, Bdec);
+    char Araw[3000], Braw[3000], op;
+    splitInputLine(line, Araw, &op, Braw);
 
-    // Прибираємо пробіли між цифрами десяткового числа
-    for (int i = 0; Adec[i]; i++)
-        if (Adec[i] == ' ') memmove(Adec + i, Adec + i + 1, strlen(Adec + i));
+    // Прибираємо пробіли
+    for (int i = 0; Araw[i]; i++)
+        if (Araw[i] == ' ') memmove(Araw + i, Araw + i + 1, strlen(Araw + i));
+    for (int i = 0; Braw[i]; i++)
+        if (Braw[i] == ' ') memmove(Braw + i, Braw + i + 1, strlen(Braw + i));
 
-    for (int i = 0; Bdec[i]; i++)
-        if (Bdec[i] == ' ') memmove(Bdec + i, Bdec + i + 1, strlen(Bdec + i));
-
-    Long A = fromDecimal(Adec);
-    Long B = fromDecimal(Bdec);
+    Long A = fromDecimal(Araw);
+    Long B = fromDecimal(Braw);
     Long R;
 
     if (op == '+') R = add(A, B);
     else if (op == '-') R = sub(A, B);
     else if (op == '*') R = mul(A, B);
-    else if (op == '/') {
-        int divisor = atoi(Bdec);
-        R = divInt(A, divisor);
+    else {
+        printf("Ділення поки не реалізовано\n");
+        return 0;
     }
 
-    printf("Внутрішнє представлення A: [");
+    printf("Внутрішній формат A: [");
     for (int i = 0; i < A.len; i++) {
         printf("%d", A.d[i]);
         if (i < A.len - 1) printf(",");
     }
     printf("]\n");
 
-    printf("Внутрішнє представлення B: [");
+    printf("Внутрішній формат B: [");
     for (int i = 0; i < B.len; i++) {
         printf("%d", B.d[i]);
         if (i < B.len - 1) printf(",");
     }
     printf("]\n");
 
-    printf("Внутрішнє представлення R: [");
+    printf("Внутрішній формат R: %s[", (R.sign < 0 ? "-" : ""));
     for (int i = 0; i < R.len; i++) {
         printf("%d", R.d[i]);
         if (i < R.len - 1) printf(",");
     }
     printf("]\n");
 
-    printf("\nРезультат у десятковій системі:\n%s\n", toDecimal(R));
+    printf("Десятковий результат:\n%s\n", toDecimal(R));
 
     return 0;
 }
