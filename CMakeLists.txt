@@ -11,4 +11,4 @@ set(CMAKE_C_STANDARD 11)
 #add_executable(lab2 lab2.c)
 ##target_link_libraries(lab2 m)
 
-add_executable(lab6_21 lab6_21.cpp)
+add_executable(lab6_22 lab6_22.cpp)
