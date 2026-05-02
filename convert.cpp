@@ -1,5 +1,6 @@
 #include <iostream>
 #include <fstream>
+
 #include <vector>
 #include <string>
 #include <filesystem>
@@ -77,22 +78,42 @@ void runFileMode() {
     std::cout << "Ім'я вихідного файлу: "; std::cin >> outName;
 
     std::ifstream inFile(inName);
-    std::ofstream outFile(outName);
+    if (!inFile.is_open()) {
+        std::cerr << "Помилка: не вдалося відкрити файл '" << inName << "' для читання.\n";
+        return;
+    }
 
-    if (!inFile || !outFile) {
-        std::cerr << "Помилка відкриття файлів!\n";
+    std::ofstream outFile(outName);
+    if (!outFile.is_open()) {
+        std::cerr << "Помилка: не вдалося створити файл '" << outName << "'.\n";
         return;
     }
 
     std::string token;
-    int count = 0;
+    int successCount = 0;
+    int errorCount = 0;
+    // Цикл зчитує файл слово за словом (число за числом),
+    // ігноруючи будь-яку кількість пробілів або переносів рядків.
     while (inFile >> token) {
         if (isValidNumber(token, from)) {
-            outFile << convertBase(token, from, to) << "\n";
-            count++;
+            std::string result = convertBase(token, from, to);
+            outFile << result << "\n";
+            successCount++;
+        } else {
+            std::cerr << "Пропущено некоректне число для бази " << from << ": " << token << "\n";
+            errorCount++;
         }
     }
-    std::cout << "Успішно оброблено чисел: " << count << "\n";
+
+    inFile.close();
+    outFile.close();
+
+    std::cout << "\n--- Обробка завершена ---\n";
+    std::cout << "Успішно конвертовано: " << successCount << "\n";
+    if (errorCount > 0) {
+        std::cout << "Знайдено помилок у числах: " << errorCount << " (див. вище)\n";
+    }
+    std::cout << "Результати збережено в: " << outName << "\n";
 }
 
 void runConsoleMode() {
@@ -121,13 +142,24 @@ void runConsoleMode() {
 // --- Головне меню ---
 
 void showHelp() {
-    std::cout << "\n=== Програма конвертації чисел ===\n"
-              << "Підтримуються бази від 2 до 16.\n"
-              << "Для великих чисел використовується бібліотека GMP.\n"
-              << "Файли мають бути в кодуванні UTF-8/ASCII.\n";
+    std::cout << "\n======================================================\n"
+              << "ПРОГРАМА КОНВЕРТАЦІЇ ВЕЛИКИХ ЧИСЕЛ (GMP)\n"
+              << "======================================================\n"
+              << "Призначення: переведення цілих чисел між системами числення\n"
+              << "від 2 до 16. Завдяки бібліотеці GMP підтримуються числа\n"
+              << "будь-якої довжини.\n\n"
+              << "ОПИС РЕЖИМІВ:\n"
+              << "1. Файловий режим: зчитує числа з текстового файлу (кожен\n"
+              << "   токен через пробіл/рядок) та записує результат у файл.\n"
+              << "2. Консольний режим: швидке переведення чисел, введених\n"
+              << "   користувачем безпосередньо в терміналі.\n"
+              << "3. Довідка: виведення цієї інформації.\n"
+              << "======================================================\n";
 }
 
 int main() {
+    clearTerminal(); // Початкове очищення екрану
+    showHelp();      // Початковий help
     std::string choice;
     while (true) {
         std::cout << "\nМеню:\n1. Файловий режим\n2. Консольний режим\n3. Довідка\n4. Вихід\n> ";
@@ -135,7 +167,10 @@ int main() {
 
         if (choice == "1") runFileMode();
         else if (choice == "2") runConsoleMode();
-        else if (choice == "3") showHelp();
+        else if (choice == "3"){
+            clearTerminal();
+            showHelp();
+        }
         else if (choice == "4") break;
         else std::cout << "Невірний вибір.\n";
     }
