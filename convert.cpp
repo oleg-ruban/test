@@ -68,6 +68,59 @@ std::string convertBase(const std::string& input, int fromBase, int toBase) {
 
 // --- Режими роботи ---
 
+// --- Освітній режим ---
+void runStepByStepMode() {
+    std::string input;
+    int from, to;
+    std::cout << "\n--- КРОК ЗА КРОКОМ (Освітній режим) ---\n";
+    std::cout << "Введіть вхідну базу: "; std::cin >> from;
+    std::cout << "Введіть вихідну базу: "; std::cin >> to;
+    std::cout << "Введіть число: "; std::cin >> input;
+
+    if (!isValidNumber(input, from)) {
+        std::cout << "Помилка: Некоректне число для цієї бази.\n";
+        return;
+    }
+
+    mpz_t n, quotient, remainder, baseTo;
+    mpz_inits(n, quotient, remainder, baseTo, NULL);
+    mpz_set_str(n, input.c_str(), from);
+    mpz_set_ui(baseTo, to);
+
+    std::cout << "\nАлгоритм: Ділимо число на основу " << to << " і записуємо остачі.\n";
+    std::cout << "Початкове число в десятковій системі: " << mpz_get_str(NULL, 10, n) << "\n\n";
+
+    std::string finalResult = "";
+    int step = 1;
+
+    while (mpz_cmp_ui(n, 0) > 0) {
+        mpz_fdiv_qr(quotient, remainder, n, baseTo);
+
+        char* q_str = mpz_get_str(NULL, 10, quotient);
+        char* r_str = mpz_get_str(NULL, to, remainder); // Цифра в цільовій системі
+        char* n_str = mpz_get_str(NULL, 10, n);
+
+        if (step <= 15) { // Обмежуємо вивід для дуже великих чисел
+            std::cout << "Крок " << step << ": " << n_str << " / " << to
+                      << " = " << q_str << ", остача: [ " << r_str << " ]\n";
+        } else if (step == 16) {
+            std::cout << "... (далі кроки виконуються аналогічно для великого числа) ...\n";
+        }
+
+        finalResult += r_str;
+        mpz_set(n, quotient);
+        step++;
+
+        free(q_str); free(r_str); free(n_str);
+    }
+
+    std::reverse(finalResult.begin(), finalResult.end());
+    std::cout << "\nЗбираємо остачі у зворотному порядку: " << finalResult << "\n";
+    std::cout << "Результат: " << finalResult << " (база " << to << ")\n";
+
+    mpz_clears(n, quotient, remainder, baseTo, NULL);
+}
+
 void runFileMode() {
     int from, to;
     std::string inName, outName;
@@ -153,7 +206,8 @@ void showHelp() {
               << "   токен через пробіл/рядок) та записує результат у файл.\n"
               << "2. Консольний режим: швидке переведення чисел, введених\n"
               << "   користувачем безпосередньо в терміналі.\n"
-              << "3. Довідка: виведення цієї інформації.\n"
+              << "3. Крок за кроком: пояснення алгоритму переведення.\n"
+              << "4. Довідка: виведення цієї інформації.\n"
               << "======================================================\n";
 }
 
@@ -162,16 +216,17 @@ int main() {
     showHelp();      // Початковий help
     std::string choice;
     while (true) {
-        std::cout << "\nМеню:\n1. Файловий режим\n2. Консольний режим\n3. Довідка\n4. Вихід\n> ";
+        std::cout << "\nМеню:\n1. Файловий режим\n2. Консольний режим\n3. Крок за кроком\n4. Довідка\n5. Вихід\n> ";
         std::cin >> choice;
 
         if (choice == "1") runFileMode();
         else if (choice == "2") runConsoleMode();
-        else if (choice == "3"){
+        else if (choice == "3") runStepByStepMode();
+        else if (choice == "4"){
             clearTerminal();
             showHelp();
         }
-        else if (choice == "4") break;
+        else if (choice == "5") break;
         else std::cout << "Невірний вибір.\n";
     }
     return 0;
